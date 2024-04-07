@@ -4,204 +4,174 @@ namespace ConnectFour;
 
 public class GameBoard
 {
-    private readonly string PLAYER1 = "X";
-    private readonly string PLAYER2 = "O";
-    private readonly int ROWS;
-    private readonly int COLS;
-    private readonly int NINAROW;
-    private string[,] Board
+  //
+  // Private constants
+  //
+  private const char _player1 = 'X';
+  private const char _player2 = 'O';
+
+
+  //
+  // Private instance data
+  //
+  private readonly int _numRows;
+  private readonly int _numCols;
+  private readonly int _winningLineCount;
+  private readonly char[,] _board;
+
+
+  //
+  // Public properties
+  //
+  public char NextPiece { get; private set; }
+
+
+  //
+  // Constructor
+  //
+  public GameBoard(int numRows, int numCols, int winningLineCount)
+  {
+    _numRows = numRows;
+    _numCols = numCols;
+    _winningLineCount = winningLineCount;
+    _board = new char[_numRows, _numCols];
+    NextPiece = _player1;
+  }
+
+
+  //
+  // Public methods
+  //
+
+  public void StartGame()
+  {
+    for (var r = 0; r < _numRows; ++r)
+      for (var c = 0; c < _numCols; ++c)
+        _board[r, c] = '-';
+  }
+
+  public void PrintBoard()
+  {
+    for (var r = _numRows - 1; r >= 0; --r)
     {
-        get; set;
+      for (var c = 0; c < _numCols; ++c)
+        Console.Write(_board[r, c] + " ");
+      Console.Write("\n");
+    }
+  }
+
+  public int Move(int c)
+  {
+    int r = NextRow(c);
+    if (r == -1)
+    {
+      Console.WriteLine("That column is full");
+      return -1;
     }
 
-    public string NextPiece
-    {
-        get; set;
-    }
+    _board[r, c] = NextPiece;
 
-    public GameBoard(int rows, int cols, int ninarow)
-    {
-        ROWS = rows;
-        COLS = cols;
-        NINAROW = ninarow;
-        Board = new string[rows, cols];
-        NextPiece = PLAYER1;
-    }
+    if (NextPiece == _player1)
+      NextPiece = _player2;
+    else
+      NextPiece = _player1;
 
-    public void StartGame()
+    return r;
+  }
+
+  public bool IsWinner(int r, int c)
+  {
+    var piece = _board[r, c];
+    foreach (Direction direction in Enum.GetValues(typeof(Direction)))
     {
-        for (int r = 0; r < ROWS; r++)
+      if (IsWinnerInDirection(r, c, piece, direction))
+      {
+        Console.WriteLine(piece + " won!");
+        return true;
+      }
+    }
+    return false;
+  }
+
+
+  //
+  // Private types
+  //
+  private enum Direction { Vertical, Horizontal, LeftDiagonal, RightDiagonal }
+
+
+  //
+  // Private methods
+  //
+
+  private (int, int) StartRowCol(int r, int c, Direction direction)
+  {
+    switch (direction)
+    {
+      case Direction.Vertical:
+        return (0, c);
+      case Direction.Horizontal:
+        return (r, 0);
+      case Direction.LeftDiagonal:
+        while (r > 0 && c > 0)
         {
-            for (int c = 0; c < COLS; c++)
-            {
-                Board[r, c] = "-";
-            }
+          --r;
+          --c;
         }
-    }
-
-    public void PrintBoard()
-    {
-        for (int r = ROWS - 1; r > -1; r--)
+        return (r, c);
+      case Direction.RightDiagonal:
+        while (r < _numRows - 1 && c > 0)
         {
-            for (int c = 0; c < COLS; c++)
-            {
-                Console.Write(Board[r, c] + " ");
-            }
-            Console.Write("\n");
+          ++r;
+          --c;
         }
+        return (r, c);
     }
+    throw new Exception("This should not happen");
+  }
 
-    public void SetPiece(int r, int c, string piece)
+  private static (int, int) NextRowCol(int r, int c, Direction direction)
+  {
+    switch (direction)
     {
-        Board[r, c] = piece;
+      case Direction.Vertical:
+        return (++r, c);
+      case Direction.Horizontal:
+        return (r, ++c);
+      case Direction.LeftDiagonal:
+        return (++r, ++c);
+      case Direction.RightDiagonal:
+        return (--r, ++c);
     }
+    throw new Exception("This should not happen");
+  }
 
-    public int NextRow(int c)
+  private bool IsWinnerInDirection(int r, int c, char piece, Direction direction)
+  {
+    int lineCount = 0;
+    (r, c) = StartRowCol(r, c, direction);
+    while (r >= 0 && r < _numRows && c >= 0 && c < _numCols)
     {
-        for (int r = 0; r < ROWS; r++)
-        {
-            if (Board[r, c] == "-")
-            {
-                return r;
-            }
-        }
-        return -1;
+      if (_board[r, c] == piece)
+        ++lineCount;
+      else
+        lineCount = 0;
+      if (lineCount == _winningLineCount)
+        return true;
+      (r, c) = NextRowCol(r, c, direction);
     }
+    return false;
+  }
 
-    public int Move(int c)
+  private int NextRow(int c)
+  {
+    for (var r = 0; r < _numRows; ++r)
     {
-        int r = NextRow(c);
-        if (r == -1) 
-        {
-            Console.WriteLine("That column is full");
-            return -1;
-        }
-
-        SetPiece(r, c, NextPiece);
-
-        if (NextPiece == PLAYER1)
-        {
-            NextPiece = PLAYER2;
-        }
-        else 
-        {   
-            NextPiece = PLAYER1;
-        }
-
+      if (_board[r, c] == '-')
+      {
         return r;
+      }
     }
-    
-    public bool VerticalWinner(int r, int c, string piece) 
-    {
-        int ninarow = 0;
-        while (r >= 0)
-        {
-            if (Board[r, c] != piece) 
-            {
-                ninarow = 0;
-                r--;
-                continue;
-            }
-
-            ninarow++;
-            if (ninarow == NINAROW)
-            {
-                return true;
-            }
-            r--;
-        }
-        return false;
-    }
-
-    public bool HorizontalWinner(int r, int c, string piece)
-    {
-        int ninarow = 0;
-        for (int i = 0; i < ROWS; i++)
-        {
-            if (Board[r, i] != piece)
-            {
-                ninarow = 0;
-                continue;
-            }
-            
-            ninarow++;
-            if (ninarow == NINAROW)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public bool RightDiagonalWinner(int r, int c, string piece)
-    {
-        int ninarow = 0;
-        while (r > 0 && c > 0) 
-        {
-            r--;
-            c--;
-        }
-        while (r < ROWS && c < COLS)
-        {
-            if (Board[r, c] != piece)
-            {
-                ninarow = 0;
-                r++;
-                c++;
-                continue;
-            }
-            
-            ninarow++;
-            if (ninarow == NINAROW)
-            {
-                return true;
-            }
-            r++;
-            c++;
-        }
-        return false;
-    }
-
-    public bool LeftDiagonalWinner(int r, int c, string piece)
-    {
-        int ninarow = 0;
-        while(r > 0 && c < COLS - 1)
-        {
-            r--;
-            c++;
-        }
-        while (r < ROWS && c >= 0)
-        {
-            if (Board[r, c] != piece)
-            {
-                ninarow = 0;
-                r++;
-                c--;
-                continue;
-            }
-            
-            ninarow++;
-            if (ninarow == NINAROW)
-            {
-                return true;
-            }
-            r++;
-            c--;
-        }
-        return false;
-    }
-
-    public bool IsWinner(int r, int c)
-    {
-        string piece = Board[r, c];
-        if (VerticalWinner(r, c, piece) || 
-        HorizontalWinner(r, c, piece) || 
-        RightDiagonalWinner(r, c, piece) || 
-        LeftDiagonalWinner(r, c, piece))
-        {
-            Console.WriteLine(piece + " won!");
-            return true;
-        }
-        return false;
-    }
+    return -1;
+  }
 }
